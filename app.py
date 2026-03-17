@@ -37,7 +37,49 @@ else:
 
 @app.route('/', methods=['GET'])
 def inicio():
-    return render_template('agregar_lugar.html')
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
+
+        cursor = connection.cursor()
+        informacion = {
+            "ciudades": [],
+            "categorias": [],
+            "lugares": []
+        }
+        
+        # Ciudades
+        cursor.execute("SELECT nombre FROM ciudades ORDER BY nombre")
+        ciudades = cursor.fetchall()
+        informacion["ciudades"] = [ciudad[0] for ciudad in ciudades]
+        
+        # Categorías
+        cursor.execute("SELECT nombre FROM categorias ORDER BY nombre")
+        categorias = cursor.fetchall()
+        informacion["categorias"] = [categoria[0] for categoria in categorias]
+        
+        # Lugares
+        cursor.execute("""
+            SELECT nombre, descripcion, calificacion 
+            FROM lugares 
+            ORDER BY nombre
+        """)
+        lugares = cursor.fetchall()
+        informacion["lugares"] = [
+            {
+                "nombre": lugar[0],
+                "descripcion": lugar[1] if lugar[1] else "",
+                "calificacion": float(lugar[2]) if lugar[2] else None
+            }
+            for lugar in lugares
+        ]
+        
+        cursor.close()
+        connection.close()
+        return jsonify(informacion)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 from flask import render_template
 
