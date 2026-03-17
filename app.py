@@ -3,9 +3,39 @@ import mysql.connector
 from flask_cors import CORS
 import math
 import os
+import jwt
+from datetime import datetime, timedelta
+from functools import wraps
 
 app = Flask(__name__, template_folder='TEMPLATES', static_folder='static')
 CORS(app)
+
+app.config['SECRET_KEY'] = 'mi_clave_secreta_super_segura_2024'  # Cambia esto por una clave segura en producción
+
+# Decorador para verificar token
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = request.headers.get('Authorization')
+        if not token:
+            return jsonify({'message': 'Token faltante'}), 401
+        try:
+            token = token.split(" ")[1]  # Bearer token
+            data = jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+        except:
+            return jsonify({'message': 'Token inválido'}), 401
+        return f(*args, **kwargs)
+    return decorated
+
+# Ruta para obtener token
+@app.route('/token', methods=['GET'])
+def get_token():
+    # Para simplicidad, devolver un token sin credenciales (en producción, requerir autenticación)
+    token = jwt.encode({
+        'user': 'consumer',
+        'exp': datetime.utcnow() + timedelta(hours=1)
+    }, app.config['SECRET_KEY'], algorithm="HS256")
+    return jsonify({'token': token})
 
 # Configuración MySQL
 def get_db_connection():
@@ -35,51 +65,64 @@ else:
 # Obtener todos los lugares
 # -------------------------------
 
-@app.route('/', methods=['GET'])
-def inicio():
-    try:
-        connection = get_db_connection()
-        if not connection:
-            return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
+def _get_all_info():
+    connection = get_db_connection()
+    if not connection:
+        return None, {"error": "No se pudo conectar a la base de datos"}
 
-        cursor = connection.cursor()
-        informacion = {
-            "ciudades": [],
-            "categorias": [],
-            "lugares": []
+    cursor = connection.cursor()
+    informacion = {
+        "ciudades": [],
+        "categorias": [],
+        "lugares": []
+    }
+
+    # Ciudades
+    cursor.execute("SELECT nombre FROM ciudades ORDER BY nombre")
+    ciudades = cursor.fetchall()
+    informacion["ciudades"] = [ciudad[0] for ciudad in ciudades]
+
+    # Categorías
+    cursor.execute("SELECT nombre FROM categorias ORDER BY nombre")
+    categorias = cursor.fetchall()
+    informacion["categorias"] = [categoria[0] for categoria in categorias]
+
+    # Lugares
+    cursor.execute("""
+        SELECT nombre, descripcion, calificacion 
+        FROM lugares 
+        ORDER BY nombre
+    """)
+    lugares = cursor.fetchall()
+    informacion["lugares"] = [
+        {
+            "nombre": lugar[0],
+            "descripcion": lugar[1] if lugar[1] else "",
+            "calificacion": float(lugar[2]) if lugar[2] else None
         }
-        
-        # Ciudades
-        cursor.execute("SELECT nombre FROM ciudades ORDER BY nombre")
-        ciudades = cursor.fetchall()
-        informacion["ciudades"] = [ciudad[0] for ciudad in ciudades]
-        
-        # Categorías
-        cursor.execute("SELECT nombre FROM categorias ORDER BY nombre")
-        categorias = cursor.fetchall()
-        informacion["categorias"] = [categoria[0] for categoria in categorias]
-        
-        # Lugares
-        cursor.execute("""
-            SELECT nombre, descripcion, calificacion 
-            FROM lugares 
-            ORDER BY nombre
-        """)
-        lugares = cursor.fetchall()
-        informacion["lugares"] = [
-            {
-                "nombre": lugar[0],
-                "descripcion": lugar[1] if lugar[1] else "",
-                "calificacion": float(lugar[2]) if lugar[2] else None
-            }
-            for lugar in lugares
-        ]
-        
-        cursor.close()
-        connection.close()
-        return jsonify(informacion)
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        for lugar in lugares
+    ]
+
+    cursor.close()
+    connection.close()
+
+    return informacion, None
+
+@app.route('/', methods=['GET'])
+@token_required
+def inicio():
+    informacion, error = _get_all_info()
+    if error:
+        return jsonify(error), 500
+    return jsonify(informacion)
+
+@app.route('/web-service', methods=['GET'])
+@token_required
+def web_service():
+    informacion, error = _get_all_info()
+    if error:
+        return jsonify(error), 500
+    return jsonify(informacion)
 
 from flask import render_template
 
