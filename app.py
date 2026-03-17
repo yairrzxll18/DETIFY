@@ -15,14 +15,20 @@ app.config['MYSQL_PORT'] = int(os.environ.get('MYSQL_PORT', 14605))
 app.config['MYSQL_USER'] = os.environ.get('MYSQL_USER', 'root')
 app.config['MYSQL_PASSWORD'] = os.environ.get('MYSQL_PASSWORD', 'ZqSbhxOGMnxsXrhoXYTLftiBWtbFWutt')
 app.config['MYSQL_DB'] = os.environ.get('MYSQL_DB', 'railway')
+app.config['MYSQL_CURSORCLASS'] = 'DictCursor'
 
 # Debug: Imprimir configuración
 print(f"MYSQL_HOST: {app.config['MYSQL_HOST']}")
 print(f"MYSQL_PORT: {app.config['MYSQL_PORT']}")
 print(f"MYSQL_USER: {app.config['MYSQL_USER']}")
+print(f"MYSQL_PASSWORD: {'*' * len(app.config['MYSQL_PASSWORD']) if app.config['MYSQL_PASSWORD'] else 'NOT SET'}")
 print(f"MYSQL_DB: {app.config['MYSQL_DB']}")
 
-mysql = MySQL(app)
+try:
+    mysql = MySQL(app)
+    print("✓ MySQL inicializado correctamente")
+except Exception as e:
+    print(f"✗ Error inicializando MySQL: {e}")
 
 # -------------------------------
 # Obtener todos los lugares
