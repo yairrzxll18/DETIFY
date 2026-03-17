@@ -1,4 +1,6 @@
 from flask import Flask, request, jsonify, render_template
+import pymysql
+pymysql.install_as_MySQLdb()
 from flask_mysqldb import MySQL
 from flask_cors import CORS
 import math
