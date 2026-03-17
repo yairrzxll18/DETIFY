@@ -3,6 +3,7 @@ import mysql.connector
 from flask_cors import CORS
 import math
 import os
+import json
 
 app = Flask(__name__, template_folder='TEMPLATES', static_folder='static')
 CORS(app)
@@ -40,7 +41,7 @@ def inicio():
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
+            return app.response_class(json.dumps({"error": "No se pudo conectar a la base de datos"}, indent=4, ensure_ascii=False), mimetype='application/json'), 500
 
         cursor = connection.cursor()
         informacion = {
@@ -77,9 +78,9 @@ def inicio():
         
         cursor.close()
         connection.close()
-        return jsonify(informacion)
+        return app.response_class(json.dumps(informacion, indent=4, ensure_ascii=False), mimetype='application/json')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return app.response_class(json.dumps({"error": str(e)}, indent=4, ensure_ascii=False), mimetype='application/json'), 500
 
 from flask import render_template
 
@@ -195,7 +196,7 @@ def extraer_informacion():
     try:
         connection = get_db_connection()
         if not connection:
-            return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
+            return app.response_class(json.dumps({"error": "No se pudo conectar a la base de datos"}, indent=4, ensure_ascii=False), mimetype='application/json'), 500
 
         cursor = connection.cursor()
         informacion = {
@@ -232,9 +233,9 @@ def extraer_informacion():
         
         cursor.close()
         connection.close()
-        return jsonify(informacion)
+        return app.response_class(json.dumps(informacion, indent=4, ensure_ascii=False), mimetype='application/json')
     except Exception as e:
-        return jsonify({"error": str(e)}), 500
+        return app.response_class(json.dumps({"error": str(e)}, indent=4, ensure_ascii=False), mimetype='application/json'), 500
 
 @app.route('/panel')
 def panel():
