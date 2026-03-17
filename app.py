@@ -1,7 +1,5 @@
 from flask import Flask, request, jsonify, render_template
-import pymysql
-pymysql.install_as_MySQLdb()
-from flask_mysqldb import MySQL
+import mysql.connector
 from flask_cors import CORS
 import math
 import os
@@ -10,25 +8,28 @@ app = Flask(__name__, template_folder='TEMPLATES')
 CORS(app)
 
 # Configuración MySQL
-app.config['MYSQL_HOST'] = os.getenv("MYSQL_HOST")
-app.config['MYSQL_PORT'] = int(os.getenv("MYSQL_PORT", 14605))
-app.config['MYSQL_USER'] = os.getenv("MYSQL_USER")
-app.config['MYSQL_PASSWORD'] = os.getenv("MYSQL_PASSWORD")
-app.config['MYSQL_DB'] = os.getenv("MYSQL_DATABASE")
-app.config['MYSQL_CURSORCLASS'] = "DictCursor"
+def get_db_connection():
+    try:
+        connection = mysql.connector.connect(
+            host=os.getenv("MYSQL_HOST", "interchange.proxy.rlwy.net"),
+            port=int(os.getenv("MYSQL_PORT", 14605)),
+            user=os.getenv("MYSQL_USER", "root"),
+            password=os.getenv("MYSQL_PASSWORD", "ZqSbhxOGMnxsXrhoXYTLftiBWtbFWutt"),
+            database=os.getenv("MYSQL_DATABASE", "railway")
+        )
+        return connection
+    except Exception as e:
+        print(f"✗ Error conectando a MySQL: {e}")
+        return None
 
-# Debug: Imprimir configuración
-print(f"MYSQL_HOST: {app.config['MYSQL_HOST']}")
-print(f"MYSQL_PORT: {app.config['MYSQL_PORT']}")
-print(f"MYSQL_USER: {app.config['MYSQL_USER']}")
-print(f"MYSQL_PASSWORD: {'*' * len(app.config['MYSQL_PASSWORD']) if app.config['MYSQL_PASSWORD'] else 'NOT SET'}")
-print(f"MYSQL_DB: {app.config['MYSQL_DB']}")
-
-try:
-    mysql = MySQL(app)
-    print("✓ MySQL inicializado correctamente")
-except Exception as e:
-    print(f"✗ Error inicializando MySQL: {e}")
+# Probar conexión al iniciar
+print("Intentando conectar a la base de datos...")
+test_conn = get_db_connection()
+if test_conn:
+    print("✓ Conexión a MySQL exitosa")
+    test_conn.close()
+else:
+    print("✗ Fallo en la conexión a MySQL")
 
 # -------------------------------
 # Obtener todos los lugares
@@ -42,19 +43,33 @@ from flask import render_template
 
 @app.route('/obtener_ciudades', methods=['GET'])
 def obtener_ciudades():
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT id_ciudad, nombre FROM ciudades")
-    ciudades = cursor.fetchall()
-    cursor.close()
-    return jsonify(list(ciudades))
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
+        cursor = connection.cursor()
+        cursor.execute("SELECT id_ciudad, nombre FROM ciudades")
+        ciudades = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return jsonify(list(ciudades))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/obtener_categorias', methods=['GET'])
 def obtener_categorias():
-    cursor = mysql.connection.cursor()
-    cursor.execute("SELECT id_categoria, nombre FROM categorias")
-    categorias = cursor.fetchall()
-    cursor.close()
-    return jsonify(list(categorias))
+    try:
+        connection = get_db_connection()
+        if not connection:
+            return jsonify({"error": "No se pudo conectar a la base de datos"}), 500
+        cursor = connection.cursor()
+        cursor.execute("SELECT id_categoria, nombre FROM categorias")
+        categorias = cursor.fetchall()
+        cursor.close()
+        connection.close()
+        return jsonify(list(categorias))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/guardar_lugar', methods=['POST'])
 def guardar_lugar():
