@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DETIFY - Agencia Turística</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            max-width: 600px;
+            width: 100%;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+
+        .buttons {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            flex: 1;
+            min-width: 150px;
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            text-decoration: none;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .btn-panel {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+
+        .btn-panel:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .btn-admin {
+            background: #f39c12;
+            color: white;
+        }
+
+        .btn-admin:hover {
+            background: #e67e22;
+            transform: translateY(-3px);
+            box-shadow: 0 10px 30px rgba(243, 156, 18, 0.4);
+        }
+
+        .form-section {
+            margin-top: 40px;
+            padding-top: 30px;
+            border-top: 2px solid #eee;
+        }
+
+        .form-section h2 {
+            color: #333;
+            margin-bottom: 20px;
+            font-size: 20px;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        label {
+            display: block;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 8px;
+        }
+
+        input, select, textarea {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #ddd;
+            border-radius: 6px;
+            font-size: 14px;
+            font-family: inherit;
+            transition: border-color 0.3s ease;
+        }
+
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+
+        textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+        }
+
+        .submit-btn {
+            width: 100%;
+            padding: 12px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin-top: 10px;
+        }
+
+        .submit-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(102, 126, 234, 0.4);
+        }
+
+        .submit-btn:active {
+            transform: translateY(0);
+        }
+
+        .success-message {
+            display: none;
+            background: #d4edda;
+            color: #155724;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #c3e6cb;
+        }
+
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            color: #721c24;
+            padding: 12px;
+            border-radius: 6px;
+            margin-bottom: 20px;
+            border: 1px solid #f5c6cb;
+        }
+
+        @media (max-width: 600px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+
+            .buttons {
+                flex-direction: column;
+            }
+
+            .btn {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🌎 DETIFY</h1>
+            <p>Plataforma de Agencia Turística</p>
+        </div>
+
+        <div class="buttons">
+            <a href="/panel" class="btn btn-panel">📊 Ir al Panel</a>
+            <button class="btn btn-admin" onclick="toggleFormulario()">➕ Agregar Lugar</button>
+        </div>
+
+        <div class="form-section" id="form-section" style="display: none;">
+            <h2>Agregar Nuevo Lugar Turístico</h2>
+            
+            <div class="success-message" id="success-message">
+                ✅ Lugar agregado correctamente
+            </div>
+            <div class="error-message" id="error-message">
+                ❌ Error al agregar el lugar
+            </div>
+
+            <form onsubmit="handleSubmit(event)">
+                <div class="grid">
+                    <div class="form-group">
+                        <label>Nombre *</label>
+                        <input type="text" name="nombre" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Ciudad *</label>
+                        <select name="id_ciudad" required>
+                            <option value="">-- Selecciona una ciudad --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Categoría *</label>
+                        <select name="id_categoria" required>
+                            <option value="">-- Selecciona una categoría --</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Dirección</label>
+                        <input type="text" name="direccion">
+                    </div>
+
+                    <div class="form-group">
+                        <label>Latitud *</label>
+                        <input type="number" name="latitud" step="0.00000001" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Longitud *</label>
+                        <input type="number" name="longitud" step="0.00000001" required>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>Descripción</label>
+                    <textarea name="descripcion"></textarea>
+                </div>
+
+                <button type="submit" class="submit-btn">✅ Guardar Lugar</button>
+                <button type="button" class="submit-btn" style="background: #95a5a6;" onclick="toggleFormulario()">❌ Cancelar</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        // Cargar ciudades y categorías al cargar la página
+        document.addEventListener('DOMContentLoaded', function() {
+            cargarCiudades();
+            cargarCategorias();
+        });
+
+        function toggleFormulario() {
+            const formSection = document.getElementById('form-section');
+            formSection.style.display = formSection.style.display === 'none' ? 'block' : 'none';
+            
+            // Limpiar mensajes
+            document.getElementById('success-message').style.display = 'none';
+            document.getElementById('error-message').style.display = 'none';
+        }
+
+        function cargarCiudades() {
+            fetch('/obtener_ciudades')
+                .then(response => response.json())
+                .then(datos => {
+                    const select = document.querySelector('[name="id_ciudad"]');
+                    datos.forEach(ciudad => {
+                        const option = document.createElement('option');
+                        option.value = ciudad[0];
+                        option.textContent = ciudad[1];
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error cargando ciudades:', error));
+        }
+
+        function cargarCategorias() {
+            fetch('/obtener_categorias')
+                .then(response => response.json())
+                .then(datos => {
+                    const select = document.querySelector('[name="id_categoria"]');
+                    datos.forEach(categoria => {
+                        const option = document.createElement('option');
+                        option.value = categoria[0];
+                        option.textContent = categoria[1];
+                        select.appendChild(option);
+                    });
+                })
+                .catch(error => console.error('Error cargando categorías:', error));
+        }
+
+        function handleSubmit(event) {
+            event.preventDefault();
+
+            const formData = new FormData(event.target);
+            const nombre = formData.get('nombre').trim();
+            const latitud = parseFloat(formData.get('latitud'));
+            const longitud = parseFloat(formData.get('longitud'));
+
+            // Validar
+            if (!nombre) {
+                alert('El nombre es obligatorio');
+                return;
+            }
+
+            if (latitud < -90 || latitud > 90) {
+                alert('Latitud debe estar entre -90 y 90');
+                return;
+            }
+
+            if (longitud < -180 || longitud > 180) {
+                alert('Longitud debe estar entre -180 y 180');
+                return;
+            }
+
+            // Enviar
+            fetch('/guardar_lugar', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                if (response.ok) {
+                    document.getElementById('success-message').style.display = 'block';
+                    event.target.reset();
+                    setTimeout(() => {
+                        toggleFormulario();
+                        location.reload();
+                    }, 2000);
+                } else {
+                    document.getElementById('error-message').style.display = 'block';
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                document.getElementById('error-message').style.display = 'block';
+            });
+        }
+    </script>
+</body>
+</html>

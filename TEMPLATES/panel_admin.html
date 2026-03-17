@@ -1,0 +1,330 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Panel Administrativo - DETIFY</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='estilos.css') }}">
+</head>
+<body>
+    <div class="dashboard">
+        <!-- SIDEBAR -->
+        <div class="sidebar">
+            <h2> DETIFY</h2>
+            <ul>
+                <li onclick="mostrarTab('dashboard')" class="active"> Dashboard</li>
+                <li onclick="mostrarTab('lugares')" class="active">📍 Ver Lugares</li>
+            </ul>
+        </div>
+
+        <!-- CONTENIDO PRINCIPAL -->
+        <div class="contenido">
+            <!-- TAB: Ver Lugares -->
+            <div id="lugares" class="tab-content active">
+                <h1>📍 Lugares Registrados</h1>
+                
+                <!-- Botones de extracción -->
+                <div class="extraction-buttons">
+                    <button class="btn btn-info" onclick="extraerInformacion()">Extraer Información</button>
+                    <button class="btn btn-json" onclick="verJSON()">Ver JSON</button>
+                    <button class="btn btn-warning" onclick="verWebService()">Web Service</button>
+                </div>
+                
+                <div class="tabla">
+                    <div class="tabla-header">
+                        <h3>Total: <span id="total-lugares">{{ lugares|length }}</span> lugares</h3>
+                    </div>
+                    
+                    <table id="tabla-lugares">
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nombre</th>
+                                <th>Ciudad</th>
+                                <th>Categoría</th>
+                                <th>Calificación</th>
+                                <th>Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for lugar in lugares %}
+                            <tr data-id="{{ lugar[0] }}">
+                                <td>{{ lugar[0] }}</td>
+                                <td>{{ lugar[1] }}</td>
+                                <td>{{ lugar[2] }}</td>
+                                <td>{{ lugar[3] }}</td>
+                                <td>
+                                    <span class="calificacion">
+                                        {% if lugar[4] %}
+                                            ⭐ {{ lugar[4] }}
+                                        {% else %}
+                                            Sin calificar
+                                        {% endif %}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-edit" onclick="editarLugar({{ lugar[0] }})"> Editar</button>
+                                    <button class="btn btn-delete" onclick="eliminarLugar({{ lugar[0] }})"> Eliminar</button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Modal para editar lugar -->
+                <div id="modal-editar" class="modal" style="display: none;">
+                    <div class="modal-content">
+                        <span class="close" onclick="cerrarModal()">&times;</span>
+                        <h2>Editar Lugar</h2>
+                        <form id="form-editar">
+                            <input type="hidden" id="editar-id" name="id">
+                            
+                            <div class="grid">
+                                <div class="campo">
+                                    <label>Nombre</label>
+                                    <input type="text" id="editar-nombre" name="nombre" required>
+                                </div>
+
+                                <div class="campo">
+                                    <label>Ciudad</label>
+                                    <select id="editar-ciudad" name="id_ciudad" required>
+                                        {% for ciudad in ciudades %}
+                                        <option value="{{ ciudad[0] }}">{{ ciudad[1] }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="campo">
+                                    <label>Categoría</label>
+                                    <select id="editar-categoria" name="id_categoria" required>
+                                        {% for categoria in categorias %}
+                                        <option value="{{ categoria[0] }}">{{ categoria[1] }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+
+                                <div class="campo">
+                                    <label>Dirección</label>
+                                    <input type="text" id="editar-direccion" name="direccion">
+                                </div>
+
+                                <div class="campo">
+                                    <label>Latitud</label>
+                                    <input type="number" id="editar-latitud" name="latitud" step="0.00000001" required>
+                                </div>
+
+                                <div class="campo">
+                                    <label>Longitud</label>
+                                    <input type="number" id="editar-longitud" name="longitud" step="0.00000001" required>
+                                </div>
+                            </div>
+
+                            <div class="campo">
+                                <label>Descripción</label>
+                                <textarea id="editar-descripcion" name="descripcion"></textarea>
+                            </div>
+
+                            <button type="submit" class="btn btn-success"> Guardar Cambios</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB: Dashboard -->
+            <div id="dashboard" class="tab-content">
+                <h1> Dashboard</h1>
+                <div class="stats-container">
+                    <div class="stat-card">
+                        <h3>Total de Lugares</h3>
+                        <p class="stat-number">{{ lugares|length }}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total de Ciudades</h3>
+                        <p class="stat-number">{{ ciudades|length }}</p>
+                    </div>
+                    <div class="stat-card">
+                        <h3>Total de Categorías</h3>
+                        <p class="stat-number">{{ categorias|length }}</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Modal para mostrar JSON -->
+            <div id="modal-json" class="modal" style="display: none;">
+                <div class="modal-content modal-json-content">
+                    <span class="close" onclick="cerrarModalJSON()">&times;</span>
+                    <h2> JSON</h2>
+                    <div class="json-container">
+                        <pre id="json-output"></pre>
+                    </div>
+                    <button class="btn btn-success" onclick="copiarJSON()" style="width: 100%;">📋 Copiar JSON</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Cambiar entre tabs
+        function mostrarTab(tabName) {
+            // Ocultar todos los tabs
+            const tabs = document.querySelectorAll('.tab-content');
+            tabs.forEach(tab => tab.classList.remove('active'));
+
+            // Mostrar el tab seleccionado
+            const tabSeleccionado = document.getElementById(tabName);
+            if (tabSeleccionado) {
+                tabSeleccionado.classList.add('active');
+            }
+
+            // Actualizar items sidebar
+            const items = document.querySelectorAll('.sidebar li');
+            items.forEach(item => item.classList.remove('active'));
+            event.target.classList.add('active');
+        }
+
+        // Eliminar lugar con confirmación
+        function eliminarLugar(id) {
+            if (confirm('¿Estás seguro de que deseas eliminar este lugar?')) {
+                fetch(`/eliminar_lugar/${id}`, { method: 'POST' })
+                    .then(response => response.json())
+                    .then(data => {
+                        alert('Lugar eliminado correctamente');
+                        location.reload();
+                    })
+                    .catch(error => alert('Error al eliminar: ' + error));
+            }
+        }
+
+        // Editar lugar
+        function editarLugar(id) {
+            fetch(`/obtener_lugar/${id}`)
+                .then(response => response.json())
+                .then(lugar => {
+                    document.getElementById('editar-id').value = lugar.id_lugar;
+                    document.getElementById('editar-nombre').value = lugar.nombre;
+                    document.getElementById('editar-descripcion').value = lugar.descripcion || '';
+                    document.getElementById('editar-direccion').value = lugar.direccion || '';
+                    document.getElementById('editar-latitud').value = lugar.latitud;
+                    document.getElementById('editar-longitud').value = lugar.longitud;
+                    document.getElementById('editar-ciudad').value = lugar.id_ciudad;
+                    document.getElementById('editar-categoria').value = lugar.id_categoria;
+                    
+                    document.getElementById('modal-editar').style.display = 'block';
+                })
+                .catch(error => alert('Error al cargar datos: ' + error));
+        }
+
+        // Cerrar modal
+        function cerrarModal() {
+            document.getElementById('modal-editar').style.display = 'none';
+        }
+
+        // Guardar cambios del modal
+        document.getElementById('form-editar').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('editar-id').value;
+            const formData = new FormData(this);
+
+            fetch(`/actualizar_lugar/${id}`, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                alert('Lugar actualizado correctamente');
+                location.reload();
+            })
+            .catch(error => alert('Error: ' + error));
+        });
+
+        // Cerrar modal al hacer clic fuera
+        window.addEventListener('click', function(event) {
+            const modal = document.getElementById('modal-editar');
+            if (event.target == modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Extraer información de las tablas
+        function extraerInformacion() {
+            fetch('/extraer_informacion')
+                .then(response => {
+                    if (!response.ok) throw new Error('Respuesta no OK');
+                    return response.json();
+                })
+                .then(data => {
+                    // almacenar datos sin mostrar automáticamente
+                    window.datosExtraidos = data;
+                })
+                .catch(error => {
+                    console.error('❌ Error al extraer información:', error);
+                    alert('Error al extraer información. Revisa la consola.');
+                });
+        }
+
+        // Ver JSON extraído - Consumir web service
+        function verJSON() {
+            const output = document.getElementById('json-output');
+            const modal = document.getElementById('modal-json');
+            
+            // Consumir el endpoint /extraer_informacion para obtener toda la información
+            fetch('/extraer_informacion')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al obtener los datos');
+                    return response.json();
+                })
+                .then(data => {
+                    // Mostrar el JSON formateado en el modal
+                    output.textContent = JSON.stringify(data, null, 2);
+                    modal.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('❌ Error:', error);
+                    output.textContent = '❌ Error al cargar los datos del web service: ' + error.message;
+                    modal.style.display = 'block';
+                });
+        }
+
+        // Cerrar modal JSON
+        function cerrarModalJSON() {
+            document.getElementById('modal-json').style.display = 'none';
+        }
+
+        // Copiar JSON al portapapeles
+        function copiarJSON() {
+            const jsonText = document.getElementById('json-output').textContent;
+            navigator.clipboard.writeText(jsonText).then(function() {
+                alert('✅ JSON copiado al portapapeles');
+            }, function(err) {
+                console.error('Error al copiar: ', err);
+                alert('❌ Error al copiar JSON');
+            });
+        }
+
+        // Ver Web Service - Consumir API
+        function verWebService() {
+            const output = document.getElementById('json-output');
+            const modal = document.getElementById('modal-json');
+            
+            // Consumir el endpoint /api/lugares para obtener toda la información del web service
+            fetch('/api/lugares')
+                .then(response => {
+                    if (!response.ok) throw new Error('Error al obtener los datos');
+                    return response.json();
+                })
+                .then(data => {
+                    // Mostrar el JSON formateado en el modal
+                    output.textContent = JSON.stringify(data, null, 2);
+                    modal.style.display = 'block';
+                })
+                .catch(error => {
+                    console.error('❌ Error:', error);
+                    output.textContent = '❌ Error al cargar los datos del web service: ' + error.message;
+                    modal.style.display = 'block';
+                });
+        }
+    </script>
+</body>
+</html>
