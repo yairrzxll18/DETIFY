@@ -6,7 +6,7 @@ from flask_cors import CORS
 import math
 import os
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='TEMPLATES')
 CORS(app)
 
 # Configuración MySQL
