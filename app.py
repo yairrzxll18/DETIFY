@@ -87,10 +87,10 @@ def obtener_api_key():
             json.dumps({
                 "exito": True,
                 "token": token,
-                "tipo": "Bearer",
                 "expiracion_horas": app.config['JWT_EXPIRATION_HOURS'],
-                "instrucciones": "Usa este token en el header Authorization como: Bearer " + token[:20] + "...",
-                "ejemplo_uso": "curl -H 'Authorization: Bearer " + token[:20] + "...' https://tu-url/"
+                "instrucciones": "Copia el token y pégalo en la URL",
+                "manera_de_usar": "Agrega ?token= a la URL con el token",
+                "ejemplo": "https://web-production-7e716.up.railway.app/?token=" + token
             }, indent=4, ensure_ascii=False),
             mimetype='application/json'
         )
