@@ -4,9 +4,97 @@ from flask_cors import CORS
 import math
 import os
 import json
+import jwt
+from datetime import datetime, timedelta
+from functools import wraps
 
 app = Flask(__name__, template_folder='TEMPLATES', static_folder='static')
 CORS(app)
+
+# Configuración para JWT
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'detify_clave_secreta_2024')
+app.config['JWT_EXPIRATION_HOURS'] = 24
+
+# Decorador para validar API Key/Token
+def token_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        token = None
+        
+        # Verificar en Authorization header
+        if 'Authorization' in request.headers:
+            auth_header = request.headers['Authorization']
+            try:
+                token = auth_header.split(" ")[1]  # Bearer <token>
+            except IndexError:
+                return app.response_class(
+                    json.dumps({"error": "Formato de Authorization inválido. Use: Bearer <token>"}, indent=4, ensure_ascii=False),
+                    status=401,
+                    mimetype='application/json'
+                )
+        
+        if not token:
+            return app.response_class(
+                json.dumps({
+                    "error": "Token requerido",
+                    "instruxiones": "1. Obtén tu API key en /api-key",
+                    "ejemplo": "curl -H 'Authorization: Bearer TU_TOKEN_AQUI' https://tu-url/"
+                }, indent=4, ensure_ascii=False),
+                status=401,
+                mimetype='application/json'
+            )
+        
+        try:
+            jwt.decode(token, app.config['SECRET_KEY'], algorithms=["HS256"])
+        except jwt.ExpiredSignatureError:
+            return app.response_class(
+                json.dumps({"error": "Token expirado. Obtén uno nuevo en /api-key"}, indent=4, ensure_ascii=False),
+                status=401,
+                mimetype='application/json'
+            )
+        except jwt.InvalidTokenError:
+            return app.response_class(
+                json.dumps({"error": "Token inválido"}, indent=4, ensure_ascii=False),
+                status=401,
+                mimetype='application/json'
+            )
+        
+        return f(*args, **kwargs)
+    return decorated
+
+# ==========================================
+# RUTA PARA OBTENER API KEY / TOKEN
+# ==========================================
+@app.route('/api-key', methods=['GET'])
+def obtener_api_key():
+    """
+    Genera un token JWT (API Key) válido por 24 horas.
+    Los consumidores deben usar este token para acceder a los demás endpoints.
+    """
+    try:
+        token = jwt.encode({
+            'usuario': 'cliente_api',
+            'exp': datetime.utcnow() + timedelta(hours=app.config['JWT_EXPIRATION_HOURS']),
+            'iat': datetime.utcnow()
+        }, app.config['SECRET_KEY'], algorithm="HS256")
+        
+        return app.response_class(
+            json.dumps({
+                "exito": True,
+                "token": token,
+                "tipo": "Bearer",
+                "expiracion_horas": app.config['JWT_EXPIRATION_HOURS'],
+                "instrucciones": "Usa este token en el header Authorization como: Bearer " + token[:20] + "...",
+                "ejemplo_uso": "curl -H 'Authorization: Bearer " + token[:20] + "...' https://tu-url/"
+            }, indent=4, ensure_ascii=False),
+            mimetype='application/json'
+        )
+    except Exception as e:
+        return app.response_class(
+            json.dumps({"error": "No se pudo generar el token: " + str(e)}, indent=4, ensure_ascii=False),
+            status=500,
+            mimetype='application/json'
+        )
 
 # Configuración MySQL
 def get_db_connection():
@@ -37,6 +125,7 @@ else:
 # -------------------------------
 
 @app.route('/', methods=['GET'])
+@token_required
 def inicio():
     try:
         connection = get_db_connection()
@@ -144,6 +233,7 @@ def guardar_lugar():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/lugares', methods=['GET'])
+@token_required
 def api_lugares():
     try:
         connection = get_db_connection()
@@ -192,6 +282,7 @@ def api_lugares():
         return jsonify({"error": str(e)}), 500
 
 @app.route('/extraer_informacion', methods=['GET'])
+@token_required
 def extraer_informacion():
     try:
         connection = get_db_connection()
