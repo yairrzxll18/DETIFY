@@ -21,7 +21,7 @@ def token_required(f):
     def decorated(*args, **kwargs):
         token = None
         
-        # Verificar en Authorization header
+        # Verificar en Authorization header primero
         if 'Authorization' in request.headers:
             auth_header = request.headers['Authorization']
             try:
@@ -33,12 +33,17 @@ def token_required(f):
                     mimetype='application/json'
                 )
         
+        # Si no hay token en header, intentar obtenerlo de los parámetros de query
+        if not token:
+            token = request.args.get('token')
+        
         if not token:
             return app.response_class(
                 json.dumps({
                     "error": "Token requerido",
-                    "instruxiones": "1. Obtén tu API key en /api-key",
-                    "ejemplo": "curl -H 'Authorization: Bearer TU_TOKEN_AQUI' https://tu-url/"
+                    "instrucciones": "Obtén tu API key en /api-key",
+                    "opcion_1": "Parámetro en URL: https://tu-url/?token=TU_TOKEN_AQUI",
+                    "opcion_2": "Header: Authorization: Bearer TU_TOKEN_AQUI"
                 }, indent=4, ensure_ascii=False),
                 status=401,
                 mimetype='application/json'
